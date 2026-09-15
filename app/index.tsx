@@ -18,9 +18,7 @@ import {
   type Deal,
   type Move,
 } from '@/logic/klondike';
-import { shouldShowInterstitial } from '@/monetization/adPolicy';
-import { shouldShowAds } from '@/monetization/entitlements';
-import { showInterstitial } from '@/monetization/interstitial';
+import { noteGameFinished } from '@/monetization/pacing';
 import { FREE_ARCHIVE_DAYS, FREE_UNDOS, useGameStore } from '@/store/useGameStore';
 import { usePremiumStore } from '@/store/usePremiumStore';
 import { MIN_TOUCH_TARGET, useTheme, withAlpha } from '@/theme';
@@ -79,17 +77,7 @@ export default function Home() {
     if (isWon(next)) {
       recordWin(day, moves + 1, Date.now() - startedAt);
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      if (
-        shouldShowAds({ isPremium, isReady }) &&
-        shouldShowInterstitial({
-          gamesPlayed: 1,
-          lastInterstitialAt: 0,
-          now: Date.now(),
-          adsRemoved: isPremium,
-        })
-      ) {
-        showInterstitial();
-      }
+      void noteGameFinished();
     }
     },
     [deal, day, moves, startedAt, recordWin, isPremium, isReady],
