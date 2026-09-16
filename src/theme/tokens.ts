@@ -66,6 +66,18 @@ export interface Palette {
   onDanger: string;
   /** Scrim behind modals. */
   scrim: string;
+  /** The face of a playing card. Deliberately near-white in BOTH themes: a
+   *  Klondike board is read as ink on card stock, and tinting the face to match
+   *  a dark app makes the pips harder to tell apart, which is the one thing a
+   *  solitaire player does constantly. */
+  cardFace: string;
+  /** The back of a face-down card, and its pattern. */
+  cardBack: string;
+  cardBackPattern: string;
+  /** Suit ink. Red and black are the information a player reads first, so they
+   *  are colours in their own right rather than reuses of `danger` and `text`. */
+  suitRed: string;
+  suitBlack: string;
   /** Inverted surface used for the primary CTA. */
   inverse: string;
   onInverse: string;
@@ -86,6 +98,11 @@ export const lightPalette: Palette = {
   danger: '#DC2626',
   onDanger: '#FFFFFF',
   scrim: 'rgba(12,12,13,0.45)',
+  cardFace: '#FBFBF9',
+  cardBack: '#E9E9E4',
+  cardBackPattern: '#15803D',
+  suitRed: '#C0182F',
+  suitBlack: '#16161A',
   inverse: '#0C0C0D',
   onInverse: '#FFFFFF',
 };
@@ -105,6 +122,11 @@ export const darkPalette: Palette = {
   danger: '#F87171',
   onDanger: '#1A0606',
   scrim: 'rgba(0,0,0,0.6)',
+  cardFace: '#F4F4EF',
+  cardBack: '#1E3A29',
+  cardBackPattern: '#4ADE80',
+  suitRed: '#E24B5F',
+  suitBlack: '#101014',
   inverse: '#F4F4F2',
   onInverse: '#0C0C0D',
 };

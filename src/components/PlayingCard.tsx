@@ -59,22 +59,17 @@ export const PlayingCard: React.FC<Props> = ({ card, placeholder }) => {
 
   if (!card.faceUp) {
     return (
-      <View
-        style={[
-          styles.card,
-          { backgroundColor: colors.surfaceAlt ?? colors.surface, borderColor: colors.border },
-        ]}
-      >
-        <View style={[styles.backPattern, { borderColor: colors.accent }]} />
+      <View style={[styles.card, { backgroundColor: colors.cardBack, borderColor: colors.border }]}>
+        <View style={[styles.backPattern, { borderColor: colors.cardBackPattern }]} />
       </View>
     );
   }
 
   const red = card.suit === 'H' || card.suit === 'D';
-  const ink = red ? '#D7263D' : '#111111';
+  const ink = red ? colors.suitRed : colors.suitBlack;
 
   return (
-    <View style={[styles.card, { backgroundColor: '#F7F7F5', borderColor: colors.border }]}>
+    <View style={[styles.card, { backgroundColor: colors.cardFace, borderColor: colors.border }]}>
       <Text variant="micro" style={{ color: ink, fontWeight: '800' }}>
         {RANKS[card.rank]}
       </Text>
