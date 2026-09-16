@@ -6,10 +6,10 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BannerAdSlot } from '@/components/BannerAdSlot';
+import { Board } from '@/components/Board';
 import { Button, Card as Surface, Text } from '@/components/ui';
 import { t } from '@/i18n';
 import {
-  SUITS,
   applyMove,
   dailyDeal,
   dayNumber,
@@ -24,7 +24,6 @@ import { usePremiumStore } from '@/store/usePremiumStore';
 import { MIN_TOUCH_TARGET, useTheme, withAlpha } from '@/theme';
 
 const ARCHIVE_SPAN = 10;
-const RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
 
 export default function Home() {
   const router = useRouter();
@@ -110,6 +109,7 @@ export default function Home() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
+        style={{ flex: 1 }}
         contentContainerStyle={{
           paddingTop: insets.top + spacing.base,
           paddingHorizontal: spacing.base,
@@ -147,15 +147,7 @@ export default function Home() {
           <Button label={t('dealCta')} icon="layers" onPress={() => open(day)} />
         ) : (
           <>
-            <View style={styles.foundations}>
-              {SUITS.map((suit) => (
-                <Surface key={suit} style={styles.foundation}>
-                  <Text variant="body">
-                    {suit} {RANKS[deal.foundations[suit]] ?? ''}
-                  </Text>
-                </Surface>
-              ))}
-            </View>
+            <Board deal={deal} />
 
             <View style={styles.controls}>
               <Button
