@@ -262,21 +262,30 @@ export default function Home() {
   );
 }
 
-/** A move as a short readable label, used for the button and its accessibility name. */
+/**
+ * A move as a short readable label, used for the button and its accessibility name.
+ *
+ * These six strings were hardcoded English in an app that ships fourteen
+ * locales, and nothing caught it: `check-ui-rules` looks for a literal written
+ * AT the call site -- a JSX text node, an attribute, an `Alert` -- and these
+ * arrive through `{describe(move)}`, an expression it cannot follow. They were
+ * the accessibility labels too, so a screen-reader user in any of the other
+ * thirteen languages heard English.
+ */
 function describe(move: Move): string {
   switch (move.kind) {
     case 'wasteToFoundation':
-      return 'Waste → foundation';
+      return t('moveWasteToFoundation');
     case 'tableauToFoundation':
-      return `Pile ${move.pile + 1} → foundation`;
+      return t('moveTableauToFoundation', { n: move.pile + 1 });
     case 'wasteToTableau':
-      return `Waste → pile ${move.pile + 1}`;
+      return t('moveWasteToTableau', { n: move.pile + 1 });
     case 'tableauToTableau':
-      return `Pile ${move.from + 1} → pile ${move.to + 1}`;
+      return t('moveTableauToTableau', { from: move.from + 1, to: move.to + 1 });
     case 'draw':
-      return 'Draw';
+      return t('moveDraw');
     default:
-      return 'Recycle';
+      return t('moveRecycle');
   }
 }
 
