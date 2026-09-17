@@ -1,15 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components/ui';
 import { useTheme } from '@/theme';
 import { SUITS, type Deal, type Suit } from '@/logic/klondike';
 import {
-  CARD_HEIGHT,
-  CARD_PEEK,
-  CARD_PEEK_DOWN,
-  CARD_WIDTH,
+  BASE_CARD_METRICS,
   PlayingCard,
+  cardMetricsForWidth,
+  tableauHeight,
 } from '@/components/PlayingCard';
 
 const PIPS: Record<Suit, string> = { S: '♠', H: '♥', D: '♦', C: '♣' };
@@ -34,24 +33,38 @@ export const Board: React.FC<Props> = ({ deal }) => {
   const { colors } = useTheme();
   const wasteTop = deal.waste[deal.waste.length - 1] ?? null;
 
+  // Measured, not taken from the window.
+  //
+  // The board sits inside a column that is already capped and centred, so the
+  // window width is the wrong number -- it would size the cards to space the
+  // board does not have. `onLayout` is the width this component was actually
+  // given, which is also what makes this correct in split view, on an Android
+  // tablet, and on a rotation.
+  const [available, setAvailable] = useState(0);
+  const metrics = available ? cardMetricsForWidth(available) : BASE_CARD_METRICS;
+
   const pileHeight = (pile: Deal['tableau'][number]) =>
     pile.reduce(
       (height, card, index) =>
         index === pile.length - 1
-          ? height + CARD_HEIGHT
-          : height + (card.faceUp ? CARD_PEEK : CARD_PEEK_DOWN),
+          ? height + metrics.height
+          : height + (card.faceUp ? metrics.peek : metrics.peekDown),
       0,
     );
 
-  const tallest = Math.max(CARD_HEIGHT, ...deal.tableau.map(pileHeight));
+  const tallest = Math.max(metrics.height, ...deal.tableau.map(pileHeight));
 
   return (
-    <View style={styles.board}>
+    <View
+      style={styles.board}
+      onLayout={(event) => setAvailable(event.nativeEvent.layout.width)}
+    >
       <View style={styles.topRow}>
         <View style={styles.slot}>
           <PlayingCard
             card={deal.stock.length ? { rank: 0, suit: 'S', faceUp: false } : null}
             placeholder={deal.stock.length ? undefined : '↻'}
+            metrics={metrics}
           />
           <Text variant="micro" tone="muted">
             {deal.stock.length}
@@ -59,7 +72,7 @@ export const Board: React.FC<Props> = ({ deal }) => {
         </View>
 
         <View style={styles.slot}>
-          <PlayingCard card={wasteTop} />
+          <PlayingCard card={wasteTop} metrics={metrics} />
           <Text variant="micro" tone="muted">
             {deal.waste.length}
           </Text>
@@ -74,6 +87,7 @@ export const Board: React.FC<Props> = ({ deal }) => {
               <PlayingCard
                 card={rank ? { rank, suit, faceUp: true } : null}
                 placeholder={PIPS[suit]}
+                metrics={metrics}
               />
               <Text variant="micro" tone="muted">
                 {rank ? RANKS[rank] : ''}
@@ -84,21 +98,21 @@ export const Board: React.FC<Props> = ({ deal }) => {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={[styles.tableau, { height: tallest + 8 }]}>
+        <View style={[styles.tableau, { height: tableauHeight(tallest) }]}>
           {deal.tableau.map((pile, index) => (
-            <View key={index} style={styles.pile}>
+            <View key={index} style={[styles.pile, { width: metrics.width }]}>
               {pile.length === 0 ? (
-                <PlayingCard card={null} />
+                <PlayingCard card={null} metrics={metrics} />
               ) : (
                 pile.map((card, position) => {
                   const above = pile.slice(0, position);
                   const top = above.reduce(
-                    (offset, c) => offset + (c.faceUp ? CARD_PEEK : CARD_PEEK_DOWN),
+                    (offset, c) => offset + (c.faceUp ? metrics.peek : metrics.peekDown),
                     0,
                   );
                   return (
                     <View key={position} style={[styles.stacked, { top }]}>
-                      <PlayingCard card={card} />
+                      <PlayingCard card={card} metrics={metrics} />
                     </View>
                   );
                 })
@@ -122,7 +136,7 @@ const styles = StyleSheet.create({
   slot: { alignItems: 'center', gap: 2 },
   spacer: { flex: 1 },
   tableau: { flexDirection: 'row', gap: 6, paddingBottom: 14 },
-  pile: { width: CARD_WIDTH },
+  pile: {},
   stacked: { position: 'absolute', left: 0 },
   pileLabel: { position: 'absolute', alignSelf: 'center' },
   rule: { height: StyleSheet.hairlineWidth, marginTop: 4 },
