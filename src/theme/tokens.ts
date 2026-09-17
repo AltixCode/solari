@@ -71,6 +71,8 @@ export interface Palette {
    *  a dark app makes the pips harder to tell apart, which is the one thing a
    *  solitaire player does constantly. */
   cardFace: string;
+  /** The card's own edge. Not `border`: a card must be findable on the table. */
+  cardBorder: string;
   /** The back of a face-down card, and its pattern. */
   cardBack: string;
   cardBackPattern: string;
@@ -99,6 +101,7 @@ export const lightPalette: Palette = {
   onDanger: '#FFFFFF',
   scrim: 'rgba(12,12,13,0.45)',
   cardFace: '#FBFBF9',
+  cardBorder: '#909086',
   cardBack: '#E9E9E4',
   cardBackPattern: '#15803D',
   suitRed: '#C0182F',
@@ -123,9 +126,15 @@ export const darkPalette: Palette = {
   onDanger: '#1A0606',
   scrim: 'rgba(0,0,0,0.6)',
   cardFace: '#F4F4EF',
+  cardBorder: '#7E7E76',
   cardBack: '#1E3A29',
   cardBackPattern: '#4ADE80',
-  suitRed: '#E24B5F',
+  // The same red as the light theme, deliberately. A card face stays light in
+  // the dark theme (#F4F4EF), so a suit colour lightened for a dark background
+  // is being drawn on the wrong surface: #E24B5F measured 3.52:1 on the face,
+  // under the 4.5:1 floor for text this size. Hearts and diamonds were the
+  // hardest thing on the table to read, in the theme most people play in.
+  suitRed: '#C0182F',
   suitBlack: '#101014',
   inverse: '#F4F4F2',
   onInverse: '#0C0C0D',

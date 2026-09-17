@@ -59,7 +59,7 @@ export const PlayingCard: React.FC<Props> = ({ card, placeholder }) => {
 
   if (!card.faceUp) {
     return (
-      <View style={[styles.card, { backgroundColor: colors.cardBack, borderColor: colors.border }]}>
+      <View style={[styles.card, { backgroundColor: colors.cardBack, borderColor: colors.cardBorder }]}>
         <View style={[styles.backPattern, { borderColor: colors.cardBackPattern }]} />
       </View>
     );
@@ -69,7 +69,7 @@ export const PlayingCard: React.FC<Props> = ({ card, placeholder }) => {
   const ink = red ? colors.suitRed : colors.suitBlack;
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.cardFace, borderColor: colors.border }]}>
+    <View style={[styles.card, { backgroundColor: colors.cardFace, borderColor: colors.cardBorder }]}>
       <Text variant="micro" style={{ color: ink, fontWeight: '800' }}>
         {RANKS[card.rank]}
       </Text>
