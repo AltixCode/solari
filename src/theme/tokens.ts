@@ -66,20 +66,6 @@ export interface Palette {
   onDanger: string;
   /** Scrim behind modals. */
   scrim: string;
-  /** The face of a playing card. Deliberately near-white in BOTH themes: a
-   *  Klondike board is read as ink on card stock, and tinting the face to match
-   *  a dark app makes the pips harder to tell apart, which is the one thing a
-   *  solitaire player does constantly. */
-  cardFace: string;
-  /** The card's own edge. Not `border`: a card must be findable on the table. */
-  cardBorder: string;
-  /** The back of a face-down card, and its pattern. */
-  cardBack: string;
-  cardBackPattern: string;
-  /** Suit ink. Red and black are the information a player reads first, so they
-   *  are colours in their own right rather than reuses of `danger` and `text`. */
-  suitRed: string;
-  suitBlack: string;
   /** Inverted surface used for the primary CTA. */
   inverse: string;
   onInverse: string;
@@ -93,19 +79,15 @@ export const lightPalette: Palette = {
   textMuted: '#5F5F66',
   textFaint: '#85858D',
   border: '#E6E6E1',
-  borderStrong: '#CFCFC8',
+  // 3.24:1 against the light background. Use this, not `border`, for the
+  // boundary of anything a person has to SEE -- a card, a board cell, a tile.
+  borderStrong: '#8A8A82',
   accent: '#15803D',
   onAccent: '#FFFFFF',
   success: '#059669',
   danger: '#DC2626',
   onDanger: '#FFFFFF',
   scrim: 'rgba(12,12,13,0.45)',
-  cardFace: '#FBFBF9',
-  cardBorder: '#909086',
-  cardBack: '#E9E9E4',
-  cardBackPattern: '#15803D',
-  suitRed: '#C0182F',
-  suitBlack: '#16161A',
   inverse: '#0C0C0D',
   onInverse: '#FFFFFF',
 };
@@ -118,24 +100,24 @@ export const darkPalette: Palette = {
   textMuted: '#A3A3AA',
   textFaint: '#6E6E76',
   border: '#26262A',
-  borderStrong: '#3A3A40',
+  // 3.49:1 against the lightest dark background any app in this portfolio
+  // generates, and 3.65:1 against the darkest. It was #3A3A40, which is
+  // 1.73:1 -- and `border` is 1.3:1 and `surface` about 1.1:1, so a board
+  // drawn with either was invisible in dark mode. That shipped: two live App
+  // Store screenshots showed grids with 70%+ of the frame indistinguishable
+  // from its own background.
+  //
+  // `#07140C` is substituted per app, so a fixed value cannot GUARANTEE 3:1.
+  // The test in src/theme/__tests__/color.test.ts is what guarantees it: it
+  // is generated into every app and fails there if that app's background
+  // makes this value insufficient.
+  borderStrong: '#6A6A72',
   accent: '#4ADE80',
   onAccent: '#0C0C0D',
   success: '#10B981',
   danger: '#F87171',
   onDanger: '#1A0606',
   scrim: 'rgba(0,0,0,0.6)',
-  cardFace: '#F4F4EF',
-  cardBorder: '#7E7E76',
-  cardBack: '#1E3A29',
-  cardBackPattern: '#4ADE80',
-  // The same red as the light theme, deliberately. A card face stays light in
-  // the dark theme (#F4F4EF), so a suit colour lightened for a dark background
-  // is being drawn on the wrong surface: #E24B5F measured 3.52:1 on the face,
-  // under the 4.5:1 floor for text this size. Hearts and diamonds were the
-  // hardest thing on the table to read, in the theme most people play in.
-  suitRed: '#C0182F',
-  suitBlack: '#101014',
   inverse: '#F4F4F2',
   onInverse: '#0C0C0D',
 };
@@ -205,4 +187,3 @@ export function scaleTypography(isTablet: boolean): ScaledTypography {
     ]),
   ) as ScaledTypography;
 }
-
