@@ -1,0 +1,35 @@
+{
+  "identifier": "7BC8F85D-99F0-4494-B9A2-54CA4103F9E5",
+  "nonRenewingSubscriptions": [],
+  "products": [
+    {
+      "displayPrice": "4.99",
+      "familyShareable": false,
+      "internalID": "40878687-D20D-4B58-A851-FC77C37EFFF2",
+      "localizations": [
+        {
+          "description": "solari remove ads lifetime unlock",
+          "displayName": "solari remove ads",
+          "locale": "en_US"
+        }
+      ],
+      "productID": "com.altixcode.solari.removeads",
+      "referenceName": "solari remove ads",
+      "type": "NonConsumable"
+    }
+  ],
+  "settings": {
+    "_applicationInternalID": "",
+    "_developerTeamID": "",
+    "_failTransactionsEnabled": false,
+    "_lastSynchronizedDate": 0,
+    "_locale": "en_US",
+    "_storefront": "USA",
+    "_storeKitErrors": []
+  },
+  "subscriptionGroups": [],
+  "version": {
+    "major": 4,
+    "minor": 0
+  }
+}
