@@ -1,14 +1,14 @@
-import Feather from '@expo/vector-icons/Feather';
-import * as Haptics from 'expo-haptics';
-import { useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Feather from "@expo/vector-icons/Feather";
+import * as Haptics from "expo-haptics";
+import { useRouter } from "expo-router";
+import React, { useCallback, useEffect, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { BannerAdSlot } from '@/components/BannerAdSlot';
-import { Board } from '@/components/Board';
-import { Button, Card as Surface, Text } from '@/components/ui';
-import { t } from '@/i18n';
+import { BannerAdSlot } from "@/components/BannerAdSlot";
+import { Board } from "@/components/Board";
+import { Button, Card as Surface, Text } from "@/components/ui";
+import { t } from "@/i18n";
 import {
   applyMove,
   dailyDeal,
@@ -17,12 +17,17 @@ import {
   legalMoves,
   type Deal,
   type Move,
-} from '@/logic/klondike';
-import { noteGameFinished } from '@/monetization/pacing';
-import { FREE_ARCHIVE_DAYS, FREE_UNDOS, useGameStore } from '@/store/useGameStore';
-import { usePremiumStore } from '@/store/usePremiumStore';
-import { MIN_TOUCH_TARGET, useTheme, withAlpha } from '@/theme';
-import { useTabletColumn } from '@/theme/useTabletColumn';
+} from "@/logic/klondike";
+import type { DoubleTapSource } from "@/components/Board";
+import { noteGameFinished } from "@/monetization/pacing";
+import {
+  FREE_ARCHIVE_DAYS,
+  FREE_UNDOS,
+  useGameStore,
+} from "@/store/useGameStore";
+import { usePremiumStore } from "@/store/usePremiumStore";
+import { MIN_TOUCH_TARGET, useTheme, withAlpha } from "@/theme";
+import { useTabletColumn } from "@/theme/useTabletColumn";
 
 const ARCHIVE_SPAN = 10;
 
@@ -48,6 +53,7 @@ export default function Home() {
   const [past, setPast] = useState<Deal[]>([]);
   const [moves, setMoves] = useState(0);
   const [startedAt, setStartedAt] = useState(0);
+  const [showHowToPlay, setShowHowToPlay] = useState(false);
 
   useEffect(() => {
     void hydrate();
@@ -68,26 +74,43 @@ export default function Home() {
 
   const play = useCallback(
     (move: Move) => {
-    if (!deal) return;
-    const next = applyMove(deal, move);
-    setPast((p) => [...p, deal]);
-    setDeal(next);
-    setMoves((m) => m + 1);
-    void Haptics.selectionAsync();
+      if (!deal) return;
+      const next = applyMove(deal, move);
+      setPast((p) => [...p, deal]);
+      setDeal(next);
+      setMoves((m) => m + 1);
+      void Haptics.selectionAsync();
 
-    if (isWon(next)) {
-      recordWin(day, moves + 1, Date.now() - startedAt);
-      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      void noteGameFinished();
-    }
+      if (isWon(next)) {
+        recordWin(day, moves + 1, Date.now() - startedAt);
+        void Haptics.notificationAsync(
+          Haptics.NotificationFeedbackType.Success,
+        );
+        void noteGameFinished();
+      }
     },
     [deal, day, moves, startedAt, recordWin, isPremium, isReady],
   );
 
+  const handleDoubleTapFoundation = useCallback(
+    (source: DoubleTapSource) => {
+      if (!deal) return;
+      const legal = legalMoves(deal);
+      const move =
+        source.kind === "waste"
+          ? legal.find((m) => m.kind === "wasteToFoundation")
+          : legal.find(
+              (m) => m.kind === "tableauToFoundation" && m.pile === source.pile,
+            );
+      if (move) play(move);
+    },
+    [deal, play],
+  );
+
   const undo = () => {
     if (past.length === 0) return;
-    if (spendUndo(isPremium) === 'locked') {
-      router.push('/paywall');
+    if (spendUndo(isPremium) === "locked") {
+      router.push("/paywall");
       return;
     }
     setDeal(past[past.length - 1]!);
@@ -96,7 +119,7 @@ export default function Home() {
 
   const openArchive = (target: number) => {
     if (!canOpen(target, today, isPremium)) {
-      router.push('/paywall');
+      router.push("/paywall");
       return;
     }
     open(target);
@@ -105,7 +128,9 @@ export default function Home() {
   const result = resultFor(day);
   const days = streak(today);
   const moveList = deal ? legalMoves(deal) : [];
-  const drawMove = moveList.find((m) => m.kind === 'draw' || m.kind === 'recycle');
+  const drawMove = moveList.find(
+    (m) => m.kind === "draw" || m.kind === "recycle",
+  );
   const won = deal ? isWon(deal) : false;
 
   return (
@@ -117,19 +142,29 @@ export default function Home() {
           paddingHorizontal: spacing.base,
           paddingBottom: spacing.xl,
           gap: spacing.base,
-        
+
           ...tabletColumn,
         }}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.titleRow}>
           <Text variant="title" style={styles.grow}>
-            {t('appName')}
+            {t("appName")}
           </Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={t('settingsTitle')}
-            onPress={() => router.push('/settings')}
+            accessibilityLabel={t("howToPlayTitle")}
+            accessibilityState={{ expanded: showHowToPlay }}
+            onPress={() => setShowHowToPlay((v) => !v)}
+            hitSlop={8}
+            style={styles.iconSlot}
+          >
+            <Feather name="help-circle" size={20} color={colors.textMuted} />
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={t("settingsTitle")}
+            onPress={() => router.push("/settings")}
             hitSlop={8}
             style={styles.iconSlot}
           >
@@ -137,31 +172,47 @@ export default function Home() {
           </Pressable>
         </View>
 
-        <Text variant="heading">{t('todayDeal')}</Text>
+        {showHowToPlay ? (
+          <Surface>
+            <Text variant="bodyStrong">{t("howToPlayTitle")}</Text>
+            <Text variant="body" style={{ marginTop: spacing.xs }}>
+              {t("howToPlayBody")}
+            </Text>
+          </Surface>
+        ) : null}
+
+        <Text variant="heading">{t("todayDeal")}</Text>
         <Text variant="caption" tone="muted">
-          {t('guaranteedWinnable')}
+          {t("guaranteedWinnable")}
         </Text>
         {days > 0 ? (
           <Text variant="caption" tone="muted">
-            {t('streakLabel', { n: days })}
+            {t("streakLabel", { n: days })}
           </Text>
         ) : null}
 
         {deal === null ? (
-          <Button label={t('dealCta')} icon="layers" onPress={() => open(day)} />
+          <Button
+            label={t("dealCta")}
+            icon="layers"
+            onPress={() => open(day)}
+          />
         ) : (
           <>
-            <Board deal={deal} />
+            <Board
+              deal={deal}
+              onDoubleTapFoundation={handleDoubleTapFoundation}
+            />
 
             <View style={styles.controls}>
               <Button
-                label={t('drawCta')}
+                label={t("drawCta")}
                 variant="secondary"
                 disabled={!drawMove}
                 onPress={() => drawMove && play(drawMove)}
               />
               <Button
-                label={t('undoCta')}
+                label={t("undoCta")}
                 variant="ghost"
                 disabled={past.length === 0}
                 onPress={undo}
@@ -170,14 +221,14 @@ export default function Home() {
 
             {won ? (
               <Surface>
-                <Text variant="heading">{t('wonTitle')}</Text>
+                <Text variant="heading">{t("wonTitle")}</Text>
                 <Text variant="body">
-                  {t('movesLabel')}: {moves}
+                  {t("movesLabel")}: {moves}
                 </Text>
               </Surface>
             ) : (
               moveList
-                .filter((m) => m.kind !== 'draw' && m.kind !== 'recycle')
+                .filter((m) => m.kind !== "draw" && m.kind !== "recycle")
                 .slice(0, 8)
                 .map((move, i) => (
                   <Pressable
@@ -202,7 +253,7 @@ export default function Home() {
             )}
             {isPremium ? null : (
               <Text variant="caption" tone="muted">
-                {t('undoLocked', { n: FREE_UNDOS })}
+                {t("undoLocked", { n: FREE_UNDOS })}
               </Text>
             )}
           </>
@@ -210,46 +261,53 @@ export default function Home() {
 
         {result ? (
           <Text variant="caption" tone="muted">
-            {t('wonTitle')} · {t('movesLabel')}: {result.moves}
+            {t("wonTitle")} · {t("movesLabel")}: {result.moves}
           </Text>
         ) : null}
 
         <Text variant="heading" style={{ marginTop: spacing.base }}>
-          {t('archiveTitle')}
+          {t("archiveTitle")}
         </Text>
         <View style={[styles.chipRow, { gap: spacing.sm }]}>
-          {Array.from({ length: ARCHIVE_SPAN }, (_, i) => today - i).map((target) => {
-            const allowed = canOpen(target, today, isPremium);
-            const label = target === today ? t('todayDeal') : `-${today - target}`;
-            const chosen = target === day;
-            return (
-              <Pressable
-                key={target}
-                accessibilityRole="button"
-                accessibilityLabel={allowed ? label : t('dayLocked')}
-                accessibilityState={{ selected: chosen, disabled: !allowed }}
-                onPress={() => openArchive(target)}
-                style={[
-                  styles.chip,
-                  {
-                    borderRadius: radius.full,
-                    paddingHorizontal: spacing.base,
-                    borderWidth: StyleSheet.hairlineWidth,
-                    borderColor: chosen ? colors.accent : colors.border,
-                    backgroundColor: chosen ? withAlpha(colors.accent, 0.16) : colors.surface,
-                  },
-                ]}
-              >
-                {/* Full contrast whether locked or not. */}
-                <Text variant="body">{label}</Text>
-                {allowed ? null : <Feather name="lock" size={14} color={colors.textMuted} />}
-              </Pressable>
-            );
-          })}
+          {Array.from({ length: ARCHIVE_SPAN }, (_, i) => today - i).map(
+            (target) => {
+              const allowed = canOpen(target, today, isPremium);
+              const label =
+                target === today ? t("todayDeal") : `-${today - target}`;
+              const chosen = target === day;
+              return (
+                <Pressable
+                  key={target}
+                  accessibilityRole="button"
+                  accessibilityLabel={allowed ? label : t("dayLocked")}
+                  accessibilityState={{ selected: chosen, disabled: !allowed }}
+                  onPress={() => openArchive(target)}
+                  style={[
+                    styles.chip,
+                    {
+                      borderRadius: radius.full,
+                      paddingHorizontal: spacing.base,
+                      borderWidth: StyleSheet.hairlineWidth,
+                      borderColor: chosen ? colors.accent : colors.border,
+                      backgroundColor: chosen
+                        ? withAlpha(colors.accent, 0.16)
+                        : colors.surface,
+                    },
+                  ]}
+                >
+                  {/* Full contrast whether locked or not. */}
+                  <Text variant="body">{label}</Text>
+                  {allowed ? null : (
+                    <Feather name="lock" size={14} color={colors.textMuted} />
+                  )}
+                </Pressable>
+              );
+            },
+          )}
         </View>
         {isPremium ? null : (
           <Text variant="caption" tone="muted">
-            {t('archiveLocked', { n: FREE_ARCHIVE_DAYS })}
+            {t("archiveLocked", { n: FREE_ARCHIVE_DAYS })}
           </Text>
         )}
       </ScrollView>
@@ -270,34 +328,42 @@ export default function Home() {
  */
 function describe(move: Move): string {
   switch (move.kind) {
-    case 'wasteToFoundation':
-      return t('moveWasteToFoundation');
-    case 'tableauToFoundation':
-      return t('moveTableauToFoundation', { n: move.pile + 1 });
-    case 'wasteToTableau':
-      return t('moveWasteToTableau', { n: move.pile + 1 });
-    case 'tableauToTableau':
-      return t('moveTableauToTableau', { from: move.from + 1, to: move.to + 1 });
-    case 'draw':
-      return t('moveDraw');
+    case "wasteToFoundation":
+      return t("moveWasteToFoundation");
+    case "tableauToFoundation":
+      return t("moveTableauToFoundation", { n: move.pile + 1 });
+    case "wasteToTableau":
+      return t("moveWasteToTableau", { n: move.pile + 1 });
+    case "tableauToTableau":
+      return t("moveTableauToTableau", {
+        from: move.from + 1,
+        to: move.to + 1,
+      });
+    case "draw":
+      return t("moveDraw");
     default:
-      return t('moveRecycle');
+      return t("moveRecycle");
   }
 }
 
 const styles = StyleSheet.create({
-  titleRow: { flexDirection: 'row', alignItems: 'center' },
+  titleRow: { flexDirection: "row", alignItems: "center" },
   grow: { flex: 1 },
   iconSlot: {
     minWidth: MIN_TOUCH_TARGET,
     minHeight: MIN_TOUCH_TARGET,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
-  foundations: { flexDirection: 'row', gap: 8 },
-  foundation: { flex: 1, alignItems: 'center' },
-  controls: { flexDirection: 'row', gap: 8 },
-  move: { minHeight: MIN_TOUCH_TARGET, justifyContent: 'center' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: MIN_TOUCH_TARGET },
+  foundations: { flexDirection: "row", gap: 8 },
+  foundation: { flex: 1, alignItems: "center" },
+  controls: { flexDirection: "row", gap: 8 },
+  move: { minHeight: MIN_TOUCH_TARGET, justifyContent: "center" },
+  chipRow: { flexDirection: "row", flexWrap: "wrap" },
+  chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minHeight: MIN_TOUCH_TARGET,
+  },
 });

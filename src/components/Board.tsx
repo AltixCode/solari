@@ -1,37 +1,77 @@
-import React, { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import React, { useRef, useState } from "react";
+import { Pressable, ScrollView, StyleSheet, View } from "react-native";
 
-import { Text } from '@/components/ui';
-import { useTheme } from '@/theme';
-import { SUITS, type Deal, type Suit } from '@/logic/klondike';
+import { Text } from "@/components/ui";
+import { useTheme } from "@/theme";
+import { SUITS, type Deal, type Suit } from "@/logic/klondike";
 import {
   BASE_CARD_METRICS,
   PlayingCard,
   cardMetricsForWidth,
   tableauHeight,
-} from '@/components/PlayingCard';
+} from "@/components/PlayingCard";
 
-const PIPS: Record<Suit, string> = { S: '♠', H: '♥', D: '♦', C: '♣' };
-const RANKS = ['', 'A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+const PIPS: Record<Suit, string> = { S: "♠", H: "♥", D: "♦", C: "♣" };
+const RANKS = [
+  "",
+  "A",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "J",
+  "Q",
+  "K",
+];
+
+export type DoubleTapSource =
+  { kind: "waste" } | { kind: "tableau"; pile: number };
 
 interface Props {
   deal: Deal;
+  /**
+   * A tester asked for exactly this: double-tapping the top card of the waste
+   * or a tableau pile sends it to its foundation "when applicable". Whether it
+   * is applicable is decided by the caller, which already has the move list --
+   * this only reports which card was double-tapped.
+   */
+  onDoubleTapFoundation?: (source: DoubleTapSource) => void;
 }
+
+const DOUBLE_TAP_MS = 350;
 
 /**
  * The Klondike board: stock, waste, four foundations and seven tableau piles.
  *
- * This renders the deal the engine already holds and changes no game state --
- * moves are still played through the labelled move list, which is reachable by
- * VoiceOver and by the capture route, where dragging cards would be neither.
- * So the board is what the player reads and the list is what they act on.
+ * This renders the deal the engine already holds and changes no game state on
+ * its own -- moves are still played through the labelled move list, which is
+ * reachable by VoiceOver and by the capture route, where dragging cards would
+ * be neither. The double-tap targets below are `accessible={false}`, so they
+ * add nothing to that VoiceOver traversal; the move list stays what an
+ * assistive-technology user acts on, and the double tap is a sighted-user
+ * shortcut to a move the list already offers.
  *
  * Tableau piles overlap so a long pile stays on screen: a face-down card shows
  * less than a face-up one because it carries no information worth the space.
  */
-export const Board: React.FC<Props> = ({ deal }) => {
+export const Board: React.FC<Props> = ({ deal, onDoubleTapFoundation }) => {
   const { colors } = useTheme();
   const wasteTop = deal.waste[deal.waste.length - 1] ?? null;
+
+  const lastTap = useRef<{ key: string; time: number }>({ key: "", time: 0 });
+  const handleTap = (key: string, source: DoubleTapSource) => {
+    if (!onDoubleTapFoundation) return;
+    const now = Date.now();
+    const isDouble =
+      lastTap.current.key === key && now - lastTap.current.time < DOUBLE_TAP_MS;
+    lastTap.current = { key, time: now };
+    if (isDouble) onDoubleTapFoundation(source);
+  };
 
   // Measured, not taken from the window.
   //
@@ -41,9 +81,11 @@ export const Board: React.FC<Props> = ({ deal }) => {
   // given, which is also what makes this correct in split view, on an Android
   // tablet, and on a rotation.
   const [available, setAvailable] = useState(0);
-  const metrics = available ? cardMetricsForWidth(available) : BASE_CARD_METRICS;
+  const metrics = available
+    ? cardMetricsForWidth(available)
+    : BASE_CARD_METRICS;
 
-  const pileHeight = (pile: Deal['tableau'][number]) =>
+  const pileHeight = (pile: Deal["tableau"][number]) =>
     pile.reduce(
       (height, card, index) =>
         index === pile.length - 1
@@ -62,8 +104,10 @@ export const Board: React.FC<Props> = ({ deal }) => {
       <View style={styles.topRow}>
         <View style={styles.slot}>
           <PlayingCard
-            card={deal.stock.length ? { rank: 0, suit: 'S', faceUp: false } : null}
-            placeholder={deal.stock.length ? undefined : '↻'}
+            card={
+              deal.stock.length ? { rank: 0, suit: "S", faceUp: false } : null
+            }
+            placeholder={deal.stock.length ? undefined : "↻"}
             metrics={metrics}
           />
           <Text variant="micro" tone="muted">
@@ -72,7 +116,14 @@ export const Board: React.FC<Props> = ({ deal }) => {
         </View>
 
         <View style={styles.slot}>
-          <PlayingCard card={wasteTop} metrics={metrics} />
+          <Pressable
+            testID="waste-card"
+            accessible={false}
+            disabled={!wasteTop || !onDoubleTapFoundation}
+            onPress={() => handleTap("waste", { kind: "waste" })}
+          >
+            <PlayingCard card={wasteTop} metrics={metrics} />
+          </Pressable>
           <Text variant="micro" tone="muted">
             {deal.waste.length}
           </Text>
@@ -90,7 +141,7 @@ export const Board: React.FC<Props> = ({ deal }) => {
                 metrics={metrics}
               />
               <Text variant="micro" tone="muted">
-                {rank ? RANKS[rank] : ''}
+                {rank ? RANKS[rank] : ""}
               </Text>
             </View>
           );
@@ -107,17 +158,40 @@ export const Board: React.FC<Props> = ({ deal }) => {
                 pile.map((card, position) => {
                   const above = pile.slice(0, position);
                   const top = above.reduce(
-                    (offset, c) => offset + (c.faceUp ? metrics.peek : metrics.peekDown),
+                    (offset, c) =>
+                      offset + (c.faceUp ? metrics.peek : metrics.peekDown),
                     0,
                   );
+                  const isTop = position === pile.length - 1;
+                  const face = <PlayingCard card={card} metrics={metrics} />;
                   return (
                     <View key={position} style={[styles.stacked, { top }]}>
-                      <PlayingCard card={card} metrics={metrics} />
+                      {isTop && card.faceUp ? (
+                        <Pressable
+                          testID={`tableau-${index}-top`}
+                          accessible={false}
+                          disabled={!onDoubleTapFoundation}
+                          onPress={() =>
+                            handleTap(`tableau:${index}`, {
+                              kind: "tableau",
+                              pile: index,
+                            })
+                          }
+                        >
+                          {face}
+                        </Pressable>
+                      ) : (
+                        face
+                      )}
                     </View>
                   );
                 })
               )}
-              <Text variant="micro" tone="muted" style={[styles.pileLabel, { top: tallest }]}>
+              <Text
+                variant="micro"
+                tone="muted"
+                style={[styles.pileLabel, { top: tallest }]}
+              >
                 {index + 1}
               </Text>
             </View>
@@ -132,12 +206,12 @@ export const Board: React.FC<Props> = ({ deal }) => {
 
 const styles = StyleSheet.create({
   board: { gap: 10 },
-  topRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 6 },
-  slot: { alignItems: 'center', gap: 2 },
+  topRow: { flexDirection: "row", alignItems: "flex-start", gap: 6 },
+  slot: { alignItems: "center", gap: 2 },
   spacer: { flex: 1 },
-  tableau: { flexDirection: 'row', gap: 6, paddingBottom: 14 },
+  tableau: { flexDirection: "row", gap: 6, paddingBottom: 14 },
   pile: {},
-  stacked: { position: 'absolute', left: 0 },
-  pileLabel: { position: 'absolute', alignSelf: 'center' },
+  stacked: { position: "absolute", left: 0 },
+  pileLabel: { position: "absolute", alignSelf: "center" },
   rule: { height: StyleSheet.hairlineWidth, marginTop: 4 },
 });
